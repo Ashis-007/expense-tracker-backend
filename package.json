@@ -1,0 +1,29 @@
+{
+  "name": "expense-tracker-backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "dev": "NODE_ENV=development nodemon src/index.js",
+    "dev2": "SET NODE_ENV=development && nodemon src/index.js",
+    "start": "NODE_ENV=production node src/index.js",
+    "lint": "npx prettier --check .",
+    "format": "npx prettier --write .",
+    "prepare": "npx husky install"
+  },
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "joi": "^17.6.0",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "winston": "^3.7.2"
+  },
+  "devDependencies": {
+    "husky": "^7.0.4",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.6.2"
+  }
+}
