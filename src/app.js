@@ -1,4 +1,4 @@
-require("dotenv").config({ path: `./.env.${process.env.NODE_ENV}` })
+require("dotenv").config()
 const express = require("express")
 const mongoose = require("mongoose")
 const morgan = require("morgan")
@@ -17,7 +17,6 @@ app.get("/", (req, res)=>{
     res.send("Expense Tracker backend up and runnin")
 })
 
-console.log(process.env.NODE_ENV)
-console.log(process.env.MONGO_LINK)
+
 
 module.exports = app
