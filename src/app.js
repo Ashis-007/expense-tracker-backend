@@ -7,6 +7,7 @@ const cors = require("cors")
 const app = express()
 const {MONGO_LINK} = require("./utils/config")
 
+
 mongoose.connect(MONGO_LINK,{UseNewUrlParser: true}, (err) => {
   if(err) console.log(err)
   console.log("CONNECTED TO DB")
@@ -20,6 +21,7 @@ app.use(express.json())
 app.get("/", (req, res)=>{
     res.send("Expense Tracker backend up and runnin")
 })
+
 
 
 
