@@ -7,6 +7,10 @@ const cors = require("cors");
 const app = express();
 const { MONGO_LINK } = require("./utils/config");
 
+const userRoutes = require("./routes/user")
+const transactionRoutes = require("./routes/transaction")
+
+
 mongoose.connect(MONGO_LINK, { UseNewUrlParser: true }, (err) => {
   if (err) console.log(err);
   console.log("CONNECTED TO DB");
