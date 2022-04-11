@@ -3,77 +3,153 @@ const bcrypt = require("bcrypt")
 const saltRounds = process.env.SALT_ROUNDS
 const jwt = require("jsonwebtoken")
 
-const response = require("../utils/response")
 const User = require("../models/index")
 
 
-exports.user_signup = (req, res) =>{
-    User.find({email: req.body.email})
-    .then(user =>{
-        if(user.length > 1){
-            return response.badRequestResponse()
-        } else{
-            bcrypt.hash(req.body.password, saltRounds, (err, hash) =>{
-                if(err) {
-                    return response.serverErrorResponse()
-                } else {
-                    const user = new User({
-                        first_name: req.body.first_name,
-                        last_name: req.body.last_name,
-                        email: req.body.email,
-                        password: hash
-                    })
-                    user.save()
-                    .then(result =>{
-                        response.createdSuccessResponse()
-                    })
-                    .catch(err =>{
-                        console.log(err)
-                        response.serverErrorResponse()
-                    })
-                }
-            })
-        }
-    })
-}
 
-exports.user_login = (req, res)=>{
-    User.find({email: req.body.email})
-    .then(user =>{
-        if(user.length < 1){
-            return response.unauthorizedResponse()
+const {successResponse,createdSuccessResponse,
+    notFoundResponse,unauthorizedResponse,
+    badRequestResponse,forbiddenResponse,
+serverErrorResponse,googleAccessDeniedResponse,
+unprocessableEntityResponse,} = require("../utils/response")
+
+//Repo
+const UserRepository = require("../repository/user.repository")
+
+//Joi
+const {signUpUserSchema, loginUserSchema} = require("../joi/auth/user")
+
+
+
+exports.user_signup = async (req, res) =>{
+    try {
+        let body = signUpUserSchema.validate(req.body)
+        if(body.error) return unprocessableEntityResponse(res, body.error.message)
+        body = body.value
+
+        const hash = await bcrypt.hash(req.body.password, saltRounds)
+        req.body.password = hash
+
+        const [user, errForUser] = await UserRepository.createUser(req.body)
+        if(errForUser) return badRequestResponse(res, errForUser)
+
+        return createdSuccessResponse(res, "Successfully created user", user)
+        }catch(err){
+            return serverErrorResponse(res)
         }
-        bcrypt.compare(req.body.password, user.password, (err, result) =>{
-            if(err) {
-                return response.badRequestResponse()
-            }
-            if(result) {
-                const token = jwt.sign({
+    }
+
+
+
+
+
+exports.user_login = async (req, res)=>{
+    try{
+        const {email, password} = req.body
+        const [user, userError] = await UserRepository.getUser({email})
+        if(userError)
+        return notFoundResponse(res, "Auth Failed")
+        if(await bcrypt.compare(password, user.password)){
+              const token = jwt.sign({
                     email: user.email,
                     userId: user._id
                 }, process.env.JWT_KEY,{
                     expiresIn: "1h"
                 })
-                return res.status(200).json({
-                    message: "Auth Success",
-                    token: token
-                })
-            }
-            response.unauthorizedResponse()
-        })
-    })
-    .catch(err =>{
-        console.log(err)
-        response.serverErrorResponse()
-    })
+                const data = {token, ...user.toJSON()}
+                return successResponse(res, "Login Successfull", data)
+        }
+    }catch(err){
+        return serverErrorResponse(res)
+    }
 }
 
-exports.user_delete = (req, res) =>{
-    User.remove({email: req.body.email})
-    .then(result =>{
-        response.successResponse(res, "User deleted successfully")
-    }).catch(err =>{
-        console.log(err)
-        response.serverErrorResponse(res, err.message)
-    })
+
+exports.user_delete = async (req, res) =>{
+    try{
+    const [user, errForUser] = await UserRepository.deleteUser(req.body)
+    if(errForUser){
+        return badRequestResponse(res, errForUser)
+    }
+    return createdSuccessResponse(res, "Deleted user successfully", user)
+}catch(err){
+    return serverErrorResponse(res)
 }
+}
+
+
+
+
+
+//Signup Route
+
+// (req, res) =>{
+//     User.find({email: req.body.email})
+//     .then(user =>{
+//         if(user.length > 1){
+//             return badRequestResponse(res, "Access denied")
+//         } else{
+//             bcrypt.hash(req.body.password, saltRounds, (err, hash) =>{
+//                 if(err) {
+//                     return serverErrorResponse(res, "Server error")
+//                 } else {
+//                     const user = new User({
+//                         first_name: req.body.first_name,
+//                         last_name: req.body.last_name,
+//                         email: req.body.email,
+//                         password: hash
+//                     })
+//                     user.save()
+//                     .then(result =>{
+//                         createdSuccessResponse(res, "Sucessfully created user")
+//                     })
+//                     .catch(err =>{
+//                         console.log(err)
+//                         serverErrorResponse(res, "Server error")
+//                     })
+//                 }
+//             })
+//         }
+//     })
+// }
+
+//delete Route
+
+//  User.remove({email: req.body.email})
+//     .then(result =>{
+//         response.successResponse(res, "User deleted successfully")
+//     }).catch(err =>{
+//         console.log(err)
+//         response.serverErrorResponse(res, "Server error")
+//     })
+
+//Login Route
+
+// User.find({email: req.body.email})
+//     .then(user =>{
+//         if(user.length < 1){
+//             return unauthorizedResponse(res, "Access denied")
+//         }
+//         bcrypt.compare(req.body.password, user.password, (err, result) =>{
+//             if(err) {
+//                 return badRequestResponse(res, "Server error")
+//             }
+//             if(result) {
+//                 const token = jwt.sign({
+//                     email: user.email,
+//                     userId: user._id
+//                 }, process.env.JWT_KEY,{
+//                     expiresIn: "1h"
+//                 })
+//                 return res.status(200).json({
+//                     message: "Auth Success",
+//                     token: token
+//                 })
+//             }
+//             unauthorizedResponse(res, "Acess denied")
+//         })
+//     })
+//     .catch(err =>{
+//         console.log(err)
+//         serverErrorResponse(res, "Server error")
+//     })
