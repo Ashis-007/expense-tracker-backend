@@ -7,10 +7,11 @@ serverErrorResponse,googleAccessDeniedResponse,
 unprocessableEntityResponse} = require("../utils/response")
 const Transaction = require("../models/index")
 
+const TransactionRepository = require("../repository/transaction.repository")
 
 exports.showTransaction = async (req, res) =>{
     try {
-        const transactions = await Transaction.find()
+        const transactions = await TransactionRepository.getAllTransaction()   //<<-----------------------Resolve This
         return successResponse(res, "All transactions fetched", {
             count : transactions.length,
             data: transactions
@@ -24,7 +25,7 @@ exports.showTransaction = async (req, res) =>{
 exports.addTransaction = async (req, res) =>{
     try{
     const {type, amount, account, category} = req.body
-    const transaction = new Transaction({
+    const transaction = TransactionRepository.createTransaction({
         type: type,
         amount: amount,
         account: account,
@@ -41,7 +42,7 @@ exports.addTransaction = async (req, res) =>{
 
 exports.deleteTransaction = async (req, res) =>{
     try{
-        const transaction = await Transaction.find({account: req.body.account})
+        const transaction = await TransactionRepository.deleteTransaction(req.body)
 
         if(!transaction) {
             return notFoundResponse(res, "No transactions found")

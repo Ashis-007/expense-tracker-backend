@@ -8,7 +8,7 @@ router.post("/signup", UserControl.user_signup)
 
 router.post("/login", UserControl.user_login)
 
-router.delete("/:email", checkAuth, UserControl.user_delete)
+router.delete("/:email", UserControl.user_delete)
 
 module.exports = router
 

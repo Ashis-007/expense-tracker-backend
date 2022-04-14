@@ -1,5 +1,4 @@
-const { query } = require("express")
-const User = require("../models/index")
+const {User} = require("../models/index")
 
 const createUser = async (user) =>{
     try {

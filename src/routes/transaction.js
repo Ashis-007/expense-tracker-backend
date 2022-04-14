@@ -6,8 +6,10 @@ const checkAuth = require("../middleware/auth")
 const userTransaction = require("../controllers/transaction")
 
 //Routes
-router.get("/", checkAuth, userTransaction.showTransaction)
+router.get("/",  userTransaction.showTransaction)
 
-router.post("/add", checkAuth, userTransaction.addTransaction)
+router.post("/add",  userTransaction.addTransaction)
 
-router.post("/delete", checkAuth, userTransaction.deleteTransaction)
+router.post("/delete",  userTransaction.deleteTransaction)
+
+module.exports = router

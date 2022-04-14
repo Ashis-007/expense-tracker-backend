@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt")
 const saltRounds = process.env.SALT_ROUNDS
 const jwt = require("jsonwebtoken")
 
-const User = require("../models/index")
+// const User = require("../models/index")
 
 
 
@@ -27,15 +27,15 @@ exports.user_signup = async (req, res) =>{
         if(body.error) return unprocessableEntityResponse(res, body.error.message)
         body = body.value
 
-        const hash = await bcrypt.hash(req.body.password, saltRounds)
+        const hash = await bcrypt.hash(req.body.password, 10)
         req.body.password = hash
 
-        const [user, errForUser] = await UserRepository.createUser(req.body)
+        const [user, errForUser] = await UserRepository.createUser(req.body) //<--------------------------------Gets caught in catch block
         if(errForUser) return badRequestResponse(res, errForUser)
 
         return createdSuccessResponse(res, "Successfully created user", user)
         }catch(err){
-            return serverErrorResponse(res)
+            return serverErrorResponse(res, err.message)
         }
     }
 
@@ -79,7 +79,7 @@ exports.user_delete = async (req, res) =>{
 
 
 
-
+//Dedicated .then and .catch routes
 
 //Signup Route
 
