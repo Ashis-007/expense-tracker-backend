@@ -1,83 +1,89 @@
-const mongoose = require("mongoose")
-const bcrypt = require("bcrypt")
-const saltRounds = process.env.SALT_ROUNDS
-const jwt = require("jsonwebtoken")
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env.development") });
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const saltRounds = process.env.SALT_ROUNDS;
+const jwt = require("jsonwebtoken");
 
 // const User = require("../models/index")
 
-
-
-const {successResponse,createdSuccessResponse,
-    notFoundResponse,unauthorizedResponse,
-    badRequestResponse,forbiddenResponse,
-serverErrorResponse,googleAccessDeniedResponse,
-unprocessableEntityResponse,} = require("../utils/response")
+const {
+  successResponse,
+  createdSuccessResponse,
+  notFoundResponse,
+  unauthorizedResponse,
+  badRequestResponse,
+  forbiddenResponse,
+  serverErrorResponse,
+  googleAccessDeniedResponse,
+  unprocessableEntityResponse,
+} = require("../utils/response");
 
 //Repo
-const UserRepository = require("../repository/user.repository")
+const UserRepository = require("../repository/user.repository");
 
 //Joi
-const {signUpUserSchema, loginUserSchema} = require("../joi/auth/user")
+const { signUpUserSchema, loginUserSchema } = require("../joi/auth/user");
 
+exports.user_signup = async (req, res) => {
+  try {
+    let body = signUpUserSchema.validate(req.body);
+    if (body.error) return unprocessableEntityResponse(res, body.error.message);
+    body = body.value;
 
+    const hash = await bcrypt.hash(req.body.password, saltRounds);
+    req.body.password = hash;
 
-exports.user_signup = async (req, res) =>{
-    try {
-        let body = signUpUserSchema.validate(req.body)
-        if(body.error) return unprocessableEntityResponse(res, body.error.message)
-        body = body.value
+    const [user, errForUser] = await UserRepository.createUser(req.body); //<--------------------------------Gets caught in catch block
+    if (errForUser) return badRequestResponse(res, errForUser);
 
-        const hash = await bcrypt.hash(req.body.password, 10)
-        req.body.password = hash
+    return createdSuccessResponse(res, "Successfully created user", user);
+  } catch (err) {
+    return serverErrorResponse(res, err.message);
+  }
+};
 
-        const [user, errForUser] = await UserRepository.createUser(req.body) //<--------------------------------Gets caught in catch block
-        if(errForUser) return badRequestResponse(res, errForUser)
+exports.user_login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const [user, userError] = await UserRepository.getUser({ email: email });
+    console.log(user);
+    if (userError) {
+      console.log(userError);
+      return notFoundResponse(res, "Auth Failed");
+    }
 
-        return createdSuccessResponse(res, "Successfully created user", user)
-        }catch(err){
-            return serverErrorResponse(res, err.message)
+    if (await bcrypt.compare(password, user[0].password)) {
+      const token = jwt.sign(
+        {
+          email: user.email,
+          userId: user._id,
+        },
+        process.env.JWT_KEY,
+        {
+          expiresIn: "1h",
         }
+      );
+      const data = { token, user };
+      return successResponse(res, "Login Successfull", data);
     }
+  } catch (err) {
+    console.log(err);
+    return serverErrorResponse(res);
+  }
+};
 
-
-
-
-
-exports.user_login = async (req, res)=>{
-    try{
-        const {email, password} = req.body
-        const [user, userError] = await UserRepository.getUser({email})
-        if(userError)
-        return notFoundResponse(res, "Auth Failed")
-        if(await bcrypt.compare(password, user.password)){
-              const token = jwt.sign({
-                    email: user.email,
-                    userId: user._id
-                }, process.env.JWT_KEY,{
-                    expiresIn: "1h"
-                })
-                const data = {token, ...user.toJSON()}
-                return successResponse(res, "Login Successfull", data)
-        }
-    }catch(err){
-        return serverErrorResponse(res)
+exports.user_delete = async (req, res) => {
+  try {
+    const [user, errForUser] = await UserRepository.deleteUser(req.body);
+    if (errForUser) {
+      return badRequestResponse(res, errForUser);
     }
-}
-
-
-exports.user_delete = async (req, res) =>{
-    try{
-    const [user, errForUser] = await UserRepository.deleteUser(req.body)
-    if(errForUser){
-        return badRequestResponse(res, errForUser)
-    }
-    return createdSuccessResponse(res, "Deleted user successfully", user)
-}catch(err){
-    return serverErrorResponse(res)
-}
-}
-
-
+    return createdSuccessResponse(res, "Deleted user successfully", user);
+  } catch (err) {
+    return serverErrorResponse(res);
+  }
+};
 
 //Dedicated .then and .catch routes
 
